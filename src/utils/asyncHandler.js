@@ -1,6 +1,6 @@
 // we can use requestHandler or fxn or whatever fnx_name
 const asyncHandler = (requestHandler) => {
-    (req,res,next) => {
+    return (req,res,next) => {
         Promise.resolve(requestHandler(req,res,next)).catch((err) => next(err))
     }
 }
