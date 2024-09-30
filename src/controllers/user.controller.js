@@ -162,6 +162,9 @@ export const logoutUser = asyncHandler (async (req,res) => {
 export const refreshTokenAccess = asyncHandler(async (req,res) => {
   try {
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+    if (!incomingRefreshToken) {
+      throw new ApiError(401,"unauthoriazed request");
+    }
 
     const decodeToken = jwt.verify(
       incomingRefreshToken,
