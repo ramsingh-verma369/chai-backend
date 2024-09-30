@@ -1,7 +1,7 @@
 import mongoose,{ Schema } from "mongoose";
 import jwt from "jsonwebtoken";
 import bcrypt from 'bcrypt';
-import { json } from "express";
+
 
 const userSchema = new Schema({
     username: {
@@ -48,15 +48,15 @@ const userSchema = new Schema({
 
 },{timestamps: true });
 
-export const User = mongoose.model("User",userSchema);
 
 userSchema.pre("save", async function (next) {
-    if(!this.isModified("password")) next();
-    this.password = bcrypt.hash(this.password,10);
+    if(!this.isModified("password")) return next();
+
+    this.password = await bcrypt.hash(this.password,10);
     next();
 });
 
-userSchema.methods.isPasswardCorrect = async function (password) {
+userSchema.methods.isPasswordCorrect = async function(password) {
     return await bcrypt.compare(password, this.password)
 }
 
@@ -86,3 +86,5 @@ userSchema.methods.generateRefreshToken = function() {
         }
     )
 };
+
+export const User = mongoose.model("User",userSchema);
