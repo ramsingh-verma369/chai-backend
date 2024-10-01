@@ -4,7 +4,6 @@ import { validateEmail } from "../utils/validateEmail.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import mongoose from "mongoose";
 import jwt from 'jsonwebtoken';
 
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -203,5 +202,154 @@ export const refreshTokenAccess = asyncHandler(async (req,res) => {
   } catch (error) {
     throw new ApiError(401,error?.message || "Invalid refresh token")
   }
+});
+
+export const changeCurrentPassword =  asyncHandler( async(req,res) => {
+  try {
+    const { oldPassword, newPassword, confPassword } = req.body;
+    
+    if(
+      [oldPassword, newPassword, confPassword].some((field) => field?.trim ==="")
+    ){
+      throw new ApiError(400,"All fields are required")
+    }
+
+    if(!(newPassword !== confPassword)){
+      throw new ApiError(401,"Password doesnot match")
+    }
+    const user = await User.findById(req.user?._id);
+    const isValidPassword = await user.isPasswordCorrect(oldPassword);
+    if(!isValidPassword){
+      throw new ApiError(400,"Invalid old password")
+    }
+
+    user.password = newPassword;
+    await user.save({validateBeforeSave: false})
+
+    return res
+    .status(200)
+    .json(
+      new ApiResponse(200,{},"Password change successfully")
+    )
+  
+  } catch (error) {
+    return res
+    .status(500)
+    .json(
+      new ApiError(500,error?.message || "Internal Server Error")
+    )
+  }
+});
+
+export const getCuurentUser = asyncHandler( async(req,res) => {
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(200,req.user,"current user fetched successfully")
+  )
 })
 
+export const updateAccountDetails = asyncHandler( async(req,res) => {
+  try {
+    const { email, fullName } = req.body;
+    if(!fullName || !email){
+      throw new ApiError(400,"All fields are required")
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user?._id,
+      {
+        $set: {
+          fullName,
+          email
+        }
+      },
+      {new: true}  //after update all information will show
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user,
+        "Account details updated successfully"
+      )
+    )
+    
+  } catch (error) {
+    return res
+    .status(500)
+    .json(
+      new ApiError(500, error?.message || "Error in updatedAccountDeatail controller")
+    )
+  }
+})
+
+export const updateUserAvatar = asyncHandler( async(req,res) => {
+  try {
+    const avatarLocalPath = req.file?.path;
+    if (!avatarLocalPath) {
+      throw new ApiError(400,"Avatar file is missing")
+    }
+  
+    const avatar = await uploadOnCloudinary(avatarLocalPath);
+    if (!avatar) {
+      throw new ApiError(400,"Error while uploading on avatar")
+    }
+  
+    const user = await findByIdAndUpdate(
+      req.user?._id,
+      {
+        $set: {
+          avatar: avatar?.url
+        }
+      },
+      {new: true}
+    ).select("-password")
+  
+    return res
+    .status(201)
+    .json(
+      new ApiResponse(201, user ,"avatar updated successfully")
+    )
+  } catch (error) {
+    new ApiError(500,"Error when updation avatar")
+  }
+})
+
+export const updatedCoverImage = asyncHandler( async(req,res) => {
+  try {
+    const coverImageLocalPath = req.file?.path;
+    if(!coverImageLocalPath){
+      throw new ApiError(400,"coverImage file is missing")
+    }
+  
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+    if (!coverImage.url) {
+      throw new ApiError(400,"error while uploading avatar")
+    }
+  
+    const user = await findByIdAndUpdate(
+      req.user?._id,
+      {
+        $set: {
+          coverImage: coverImage?.url
+        }
+      },
+      {new: true}
+    )
+  
+    return res
+    .status(201)
+    .json(
+      new ApiResponse(200, user, "coverImage updated successfully")
+    )
+  } catch (error) {
+    return res
+    .status(500)
+    .json(
+      new ApiError(500,"Error in updated cover image controller")
+    )
+  }
+})
